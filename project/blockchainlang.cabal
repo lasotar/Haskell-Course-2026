@@ -1,0 +1,9 @@
+cabal-version: 3.0
+name:          blockchainlang
+version:       0.1.0.0
+
+library
+    exposed-modules: AST
+    hs-source-dirs:  src
+    default-language: GHC2021
+    build-depends:   base ^>= 4.18
