@@ -74,9 +74,12 @@ operatorTable =
   , [ Prefix (do { keyword "not"; return Not }) ]
   ]
   where
-    infixL sym op = Infix (do
+    -- `try` wraps the whole operator parser so that if a longer symbol like
+    -- ">=" consumes ">" and then fails to find "=", parsec backtracks
+    -- completely and the next alternative (">") gets a chance to match.
+    infixL sym op = Infix (try (do
       symbol sym
-      return (\l r -> BinOp op l r))
+      return (\l r -> BinOp op l r)))
       AssocLeft
 
 pTerm :: Parser Expr
