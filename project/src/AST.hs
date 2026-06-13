@@ -15,7 +15,7 @@ data Type
   | TMap Type Type
   deriving (Show, Eq)
 
-data Operator 
+data Op
   -- Arithmetic
   = Add
   | Sub
@@ -36,12 +36,12 @@ data Operator
   deriving (Show, Eq)
 
 data Expr
-  = Var       String
-  | Lit       Value
-  | Operator  Operator Expr Expr
-  | Index     Expr Expr
+  = Var    String
+  | Lit    Value
+  | BinOp  Op Expr Expr
+  | Index  Expr Expr
   | Sender
-  | Not       Expr
+  | Not    Expr
   deriving (Show, Eq)
 
 data Statement
