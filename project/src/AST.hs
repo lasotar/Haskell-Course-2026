@@ -16,23 +16,9 @@ data Type
   deriving (Show, Eq)
 
 data Op
-  -- Arithmetic
-  = Add
-  | Sub
-  | Mul
-  | Div
-
-  -- Comparison  
-  | Eq    --  left == right
-  | Neq   --  left != right
-  | Lt    --  left <  right
-  | Lte   --  left <= right
-  | Gt    --  left >  right
-  | Gte   --  left >= right
-
-  -- Logical
-  | And
-  | Or
+  = Add | Sub | Mul | Div
+  | Eq  | Neq | Lt  | Lte | Gt | Gte
+  | And | Or
   deriving (Show, Eq)
 
 data Expr
@@ -47,26 +33,23 @@ data Expr
 data Statement
   = Assign  Expr Expr
   | Require Expr
-  | If Expr [Statement] [Statement]
+  | If      Expr [Statement] [Statement]
   deriving (Show, Eq)
 
 data TransactionDef = TransactionDef
-  { txName    :: String
-  , txParams  :: [(String, Type)]
-  , txBody    :: [Statement]
-  }
-  deriving (Show, Eq)
+  { txName   :: String
+  , txParams :: [(String, Type)]
+  , txBody   :: [Statement]
+  } deriving (Show, Eq)
 
 data StateVar = StateVar
   { svName :: String
   , svType :: Type
   , svInit :: Expr
-  }
-  deriving (Show, Eq)
+  } deriving (Show, Eq)
 
 data Contract = Contract
-  { contractName :: String
+  { contractName  :: String
   , contractState :: [StateVar]
   , contractTxs   :: [TransactionDef]
-  }
-  deriving (Show, Eq)
+  } deriving (Show, Eq)

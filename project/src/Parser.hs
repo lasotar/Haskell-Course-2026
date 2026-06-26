@@ -1,15 +1,16 @@
 module Parser (parseContract) where
 
 import AST
+import Data.Void (Void)
+import Text.Megaparsec
+import Text.Megaparsec.Char
+import qualified Text.Megaparsec.Char.Lexer as L
+import Control.Monad.Combinators.Expr (makeExprParser, Operator(..))
 
-import Text.Parsec
-import Text.Parsec.Expr     -- buildExpressionParser: handles operator precedence
-import Text.Parsec.String (Parser)
+type Parser = Parsec Void String
 
 skipSpacesAndComments :: Parser ()
-skipSpacesAndComments = skipMany (skipMany1 space <|> lineComment)
-  where
-    lineComment = try (string "--") >> skipMany (satisfy (/= '\n'))
+skipSpacesAndComments = L.space space1 (L.skipLineComment "--") empty
 
 withTrailingWhitespace :: Parser a -> Parser a
 withTrailingWhitespace p = do
@@ -31,15 +32,15 @@ reserved =
 keyword :: String -> Parser ()
 keyword w = withTrailingWhitespace (try (do
   _ <- string w
-  notFollowedBy (alphaNum <|> char '_')))
+  notFollowedBy (alphaNumChar <|> char '_')))
 
 identifier :: Parser String
 identifier = withTrailingWhitespace (try (do
-  first <- letter <|> char '_'
-  rest  <- many (alphaNum <|> char '_')
+  first <- letterChar <|> char '_'
+  rest  <- many (alphaNumChar <|> char '_')
   let name = first : rest
   if name `elem` reserved
-    then unexpected ("reserved keyword '" ++ name ++ "'")
+    then fail ("'" ++ name ++ "' is a reserved keyword")
     else return name))
 
 pType :: Parser Type
@@ -59,9 +60,6 @@ pMapType = do
   symbol ">"
   return (TMap k v)
 
-pExpr :: Parser Expr
-pExpr = buildExpressionParser operatorTable pTerm
-
 operatorTable =
   [ [ infixL "||"  Or  ]
   , [ infixL "&&"  And ]
@@ -74,22 +72,9 @@ operatorTable =
   , [ Prefix (do { keyword "not"; return Not }) ]
   ]
   where
-    -- `try` wraps the whole operator parser so that if a longer symbol like
-    -- ">=" consumes ">" and then fails to find "=", parsec backtracks
-    -- completely and the next alternative (">") gets a chance to match.
-    infixL sym op = Infix (try (do
+    infixL sym op = InfixL (do
       symbol sym
-      return (\l r -> BinOp op l r)))
-      AssocLeft
-
-pTerm :: Parser Expr
-pTerm = do
-  base <- pAtom
-  keys <- many pIndexSuffix
-  return (foldl Index base keys)
-
-pIndexSuffix :: Parser Expr
-pIndexSuffix = between (symbol "[") (symbol "]") pExpr
+      return (BinOp op))
 
 pAtom :: Parser Expr
 pAtom
@@ -99,13 +84,26 @@ pAtom
   <|> do { keyword "empty";  return (Lit (VMap []))     }
   <|> pInteger
   <|> pAddressLit
-  <|> do { name <- identifier; return (Var name)        }
+  <|> do { name <- identifier; return (Var name) }
   <|> pParens
+
+pTerm :: Parser Expr
+pTerm = do
+  base <- pAtom
+  keys <- many pIndexSuffix
+  return (foldl Index base keys)
+
+pExpr :: Parser Expr
+pExpr = makeExprParser pTerm operatorTable
+
+pIndexSuffix :: Parser Expr
+pIndexSuffix = between (symbol "[") (symbol "]") pExpr
+
 
 pInteger :: Parser Expr
 pInteger = withTrailingWhitespace (do
-  digits <- many1 digit
-  return (Lit (VInt (read digits))))
+  n <- L.decimal
+  return (Lit (VInt n)))
 
 pAddressLit :: Parser Expr
 pAddressLit = withTrailingWhitespace (do
@@ -123,7 +121,6 @@ pStatement
   <|> pIf
   <|> pAssign
 
--- require expr ;
 pRequire :: Parser Statement
 pRequire = do
   keyword "require"
@@ -196,5 +193,5 @@ pStateBlock = do
   keyword "state"
   between (symbol "{") (symbol "}") (many pStateVar)
 
-parseContract :: String -> String -> Either ParseError Contract
+parseContract :: String -> String -> Either (ParseErrorBundle String Void) Contract
 parseContract = parse pContract

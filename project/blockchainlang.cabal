@@ -3,12 +3,23 @@ name:          blockchainlang
 version:       0.1.0.0
 
 library
-    exposed-modules: AST, Parser
+    exposed-modules: AST, Parser, Eval, Ledger
     hs-source-dirs:  src
     default-language: GHC2021
     build-depends:
-        base   ^>= 4.18
-      , parsec
+        base             ^>= 4.18
+      , megaparsec
+      , parser-combinators
+      , containers
+
+executable demo
+    main-is:          UsageExample.hs
+    hs-source-dirs:   app
+    default-language: GHC2021
+    build-depends:
+        base             ^>= 4.18
+      , containers
+      , blockchainlang
 
 test-suite tests
     type:             exitcode-stdio-1.0
@@ -17,4 +28,6 @@ test-suite tests
     default-language: GHC2021
     build-depends:
         base             ^>= 4.18
+      , megaparsec
+      , containers
       , blockchainlang
